@@ -11,3 +11,7 @@ resource "azurerm_resource_group" "exapmle2" {
   name     = "sai"
   location = "East US"
 }
+resource "azurerm_resource_group" "example3" {
+  name = "my-rg"
+  location = "East US"
+}
