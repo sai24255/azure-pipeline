@@ -1,0 +1,123 @@
+name: Careers Infra Prd
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        type: boolean
+        description: Run Apply Stage
+        default: false
+      unlock:
+        type: boolean
+        description: Unlock Terraform
+        default: false
+
+jobs:
+  terraform_plan:
+    environment: prd-careers
+    runs-on: ubuntu-latest
+    name: Terraform Plan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Set up Azure CLI (if using Azure)
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          az login --service-principal -u ${{ vars.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ vars.AZURE_TENANT_ID }}
+          az account set --subscription ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Unlock Terraform (if unlock is true)
+        if: ${{ github.event.inputs.unlock == 'true' }}
+        run: |
+          terraform force-unlock -force <LOCK_ID>
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out plan.out
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: prd-careers-infra-plan
+          path: plan.out
+
+  terraform_apply:
+    if: ${{ github.event.inputs.apply == 'true' }}
+    needs: terraform_plan
+    environment: prd-careers
+    runs-on: ubuntu-latest
+    name: Terraform Apply
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Set up Azure CLI (if using Azure)
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          az login --service-principal -u ${{ vars.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ vars.AZURE_TENANT_ID }}
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: prd-careers-infra-plan
+          path: .
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve plan.out
+
+  # teams_notification:
+  #   needs: terraform_apply
+  #   if: always() && github.event.inputs.apply == 'true'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Success Notification
+  #       if: needs.terraform_apply.result == 'success'
+  #       uses: actions/github-script@v6
+  #       with:
+  #         script: |
+  #           const payload = {
+  #             text: "Careers Infra Deploy PRD - Success ✅",
+  #             color: "49f03a",
+  #             type: "deployment"
+  #           };
+  #           await fetch('${{ secrets.MS_TEAMS_WEBHOOK_URI }}', {
+  #             method: 'POST',
+  #             body: JSON.stringify(payload),
+  #             headers: { 'Content-Type': 'application/json' }
+  #           });
+
+  #     - name: Failure Notification
+  #       if: needs.terraform_apply.result != 'success'
+  #       uses: actions/github-script@v6
+  #       with:
+  #         script: |
+  #           const payload = {
+  #             text: "Careers Infra Deploy PRD - Failed ❌",
+  #             color: "f50505",
+  #             type: "deployment"
+  #           };
+  #           await fetch('${{ secrets.MS_TEAMS_WEBHOOK_URI }}', {
+  #             method: 'POST',
+  #             body: JSON.stringify(payload),
+  #             headers: { 'Content-Type': 'application/json' }
+  #           });
