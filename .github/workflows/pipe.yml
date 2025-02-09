@@ -28,18 +28,12 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      - name: Set up Azure CLI (if using Azure)
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az login --service-principal -u ${{ vars.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ vars.AZURE_TENANT_ID }}
-          az account set --subscription ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Unlock Terraform (if unlock is true)
-        if: ${{ github.event.inputs.unlock == 'true' }}
-        run: |
-          terraform force-unlock -force <LOCK_ID>
-
-      - name: Terraform Init
+      - name: Terraform Init with Backend Configuration
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init \
             -backend-config="resource_group_name=first-rg" \
@@ -73,24 +67,24 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      - name: Set up Azure CLI (if using Azure)
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az login --service-principal -u ${{ vars.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ vars.AZURE_TENANT_ID }}
-
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
           name: prd-careers-infra-plan
           path: .
 
-      - name: Terraform Init
+      - name: Terraform Init with Backend Configuration
+        env:
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init \
             -backend-config="resource_group_name=first-rg" \
             -backend-config="storage_account_name=statemangement" \
             -backend-config="container_name=tfstate" \
-            -backend-config=key=terraform.tfstate"
+            -backend-config="key=terraform.tfstate"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve plan.out
