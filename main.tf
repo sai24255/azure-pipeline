@@ -7,3 +7,7 @@ resource "azurerm_resource_group" "examples" {
   name     = "example-resources1"
   location = "East US"
 }
+resource "azurerm_resource_group" "exapmle2" {
+  name     = "sai"
+  location = "East US"
+}
