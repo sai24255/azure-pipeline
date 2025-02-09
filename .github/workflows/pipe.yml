@@ -40,7 +40,12 @@ jobs:
           terraform force-unlock -force <LOCK_ID>
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=first-rg" \
+            -backend-config="storage_account_name=statemangement" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=terraform.tfstate"
 
       - name: Terraform Plan
         run: terraform plan -out plan.out
@@ -80,7 +85,12 @@ jobs:
           path: .
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=first-rg" \
+            -backend-config="storage_account_name=statemangement" \
+            -backend-config="container_name=tfstate" \
+            -backend-config=key=terraform.tfstate"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve plan.out
