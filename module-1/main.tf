@@ -10,6 +10,10 @@ terraform {
 provider "azurerm" {
   features {}
 }
+resource "azurerm_resource_group" "example3" {
+  name     = "my-rg" # Ensure this matches the existing resource group name
+  location = "eastus" # Ensure this matches the existing resource group location
+}
 
 resource "azurerm_storage_account" "deepslabteststorageacc" {
   name = "deepslabteststorageacc"
