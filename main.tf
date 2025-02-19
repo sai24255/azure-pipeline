@@ -15,3 +15,6 @@ resource "azurerm_resource_group" "example3" {
   name = "my-rg"
   location = "East US"
 }
+module "app" {
+  source = "./module-1/"
+}
